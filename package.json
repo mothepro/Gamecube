@@ -1,0 +1,16 @@
+{
+  "name": "gamecube",
+  "version": "1.0.0",
+  "description": "Interface between gamecube controller and browser",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "gamecube",
+    "controller",
+    "gamepad"
+  ],
+  "author": "Maurice Prosper",
+  "license": "ISC"
+}
