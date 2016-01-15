@@ -12,5 +12,8 @@
     "gamepad"
   ],
   "author": "Maurice Prosper",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "mocha": "^2.3.4"
+  }
 }
