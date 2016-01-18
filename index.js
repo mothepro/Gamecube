@@ -9,9 +9,6 @@ const util = require( 'util' );
 const buttons = ['a'];
 const axes = ['stick'];
 
-// export constructor
-module.exports = Gamecube;
-
 // Gamecube can emit events
 util.inherits(Gamecube, EventEmitter);
 
@@ -19,50 +16,59 @@ util.inherits(Gamecube, EventEmitter);
  * Base API constructor
  * Holds all gamecube controllers and give the events
  * @constructor
- * @param poll FPS [60]
- * @constructor
  */
-function Gamecube(poll) {
+function Gamecube() {
     EventEmitter.call(this);
 
-    if(typeof poll === 'undefined')
-        poll = 60; // 60 FPS
-
-    this.rAF = window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.requestAnimationFrame;
     this.get = navigator.getGamepads || navigator.webkitGetGamepads;
+
+    if(typeof this.get === 'undefined')
+        throw Error('This browser does not support controllers');
+
     this.controllers = [];
 
-    if(!this.get)
-        throw Error('This browser does not support controllers');
+    // disconnect on close
+    process.on('exit', this.remove()); //Gamecube.remove.bind(this));
+}
+
+/**
+ * Connect all controllers, and begin polling
+ * @param poll FPS [60]
+ */
+Gamecube.prototype.start = function (poll) {
+    if(typeof poll === 'undefined') poll = 60; // 60 FPS
+
+    var me = this,
+        test = function () { // Check for controller
+            var gamepads = me.get.apply(navigator);
+            for (var i = 0; i < gamepads.length; i++)
+                if (gamepads[i])
+                    if (!me.has(gamepads[i].index))
+                        me.add(gamepads[i].index);
+        };
+
+    test();
 
     // Listen for the controller on the browser
     if('GamepadEvent' in window) {
         window.addEventListener("gamepadconnected", function (e) {
-            Gamecube.add(e.gamepad.index);
+            me.add(e.gamepad.index);
         });
         window.addEventListener("gamepaddisconnected", function (e) {
-            Gamecube.remove(e.gamepad.index);
+            me.remove(e.gamepad.index);
         });
     } else {
-        setInterval(function () { // Check for controller
-            var me = this;
-            var gamepads = me.get();
-            for (var i = 0; i < gamepads.length; i++)
-                if (gamepads[i])
-                    if (!Gamecube.has(gamepads[i].index))
-                        Gamecube.add(gamepads[i].index);
-        }, 1000);
+        setInterval(test, 1000);
     }
 
-    // Update Controllers
-    if(this.rAF)
-        this.rAF(Gamecube.poll);
-    else
-        setInterval(Gamecube.poll, Math.floor(1000 / poll));
+    //if(this.rAF)
+    //    this.rAF(Gamecube.poll);
+    //else
 
-    // disconnect on close
-    process.on('exit', this.remove.bind(this));
-}
+    // Update Controllers
+    if(poll)
+        setInterval(this.poll.bind(this), Math.floor(1000 / poll));
+};
 
 /**
  * Add a controller
@@ -100,10 +106,10 @@ Gamecube.prototype.size = function() {
  * Update info for every controller
  */
 Gamecube.prototype.poll = function () {
-    data = this.get();
+    var data = this.get.apply(navigator),
+        me = this;
 
     this.controllers.forEach(function (controller, port) {
-
         // save current state
         controller.prev = controller.current;
 
@@ -115,29 +121,27 @@ Gamecube.prototype.poll = function () {
                 val = val.pressed;
 
             // set new val
-            if(button === 'l' || button === 'r') {
-                controller.current[button].button = val;
-                prev = controller.prev[ button].button;
-            } else {
-                controller.current[button] = val;
-                prev = controller.prev[ button ];
-            }
+            controller.current[button] = val;
+            prev = controller.prev[ button ];
+
+            if(val)
+                console.log(prev, button, controller);
 
             // emit events
             if(val) {
                 if(controller.prev[ button ]) {// Hold - Holding a button
-                    this.emit(util.format('%d:%s:hold', port, button));
+                    me.emit(util.format('%d:%s:hold', port, button));
                     //this.emit(util.format('any:%s:hold', button));
                 } else { // Press - Just tapped the button
-                    this.emit(util.format('%d:%s:press', port, button));
+                    me.emit(util.format('%d:%s:press', port, button));
                     //this.emit(util.format('any:%s:press', button));
                 }
             } else {
                 if(controller.prev[ button ]) { // Release - no longer holding button
-                    this.emit(util.format('%d:%s:release', port, button));
+                    me.emit(util.format('%d:%s:release', port, button));
                     //this.emit(util.format('any:%s:release', button));
                 } else { // Idle - not pressing button
-                    this.emit(util.format('%d:%s:idle', port, button));
+                    me.emit(util.format('%d:%s:idle', port, button));
                 }
             }
         });
@@ -239,3 +243,6 @@ function Controller(index) {
     this.prev = this.current;
     this.change = false;
 }
+
+// export new instance
+module.exports = new Gamecube;
