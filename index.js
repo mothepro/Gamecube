@@ -6,6 +6,8 @@ if(typeof window === 'undefined') // typeof module !== 'undefined' && module.exp
 const EventEmitter = require( 'events' ).EventEmitter;
 const util = require( 'util' );
 
+const FPS = Math.floor(1000 / 60); // 60 FPS
+
 const buttons = ['a'];
 const axes = ['stick'];
 
@@ -33,11 +35,8 @@ function Gamecube() {
 
 /**
  * Connect all controllers, and begin polling
- * @param poll FPS [60]
  */
-Gamecube.prototype.start = function (poll) {
-    if(typeof poll === 'undefined') poll = 60; // 60 FPS
-
+Gamecube.prototype.start = function () {
     var me = this,
         test = function () { // Check for controller
             var gamepads = me.get.apply(navigator);
@@ -57,17 +56,23 @@ Gamecube.prototype.start = function (poll) {
         window.addEventListener("gamepaddisconnected", function (e) {
             me.remove(e.gamepad.index);
         });
-    } else {
+    } else
         setInterval(test, 1000);
-    }
-
-    //if(this.rAF)
-    //    this.rAF(Gamecube.poll);
-    //else
 
     // Update Controllers
-    if(poll)
-        setInterval(this.poll.bind(this), Math.floor(1000 / poll));
+    var rAF = window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        window.oRequestAnimationFrame;
+
+    if(rAF)
+        rAF(function r() { // Request frame, then poll
+            me.poll.call(me);
+            rAF(r);
+        });
+    else
+        setInterval(this.poll.bind(this), FPS);
 };
 
 /**
