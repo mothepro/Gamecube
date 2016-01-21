@@ -16,6 +16,20 @@ util.inherits(Gamecube, EventEmitter);
 util.inherits(Controller, EventEmitter);
 
 /**
+ * Clone myself
+ */
+Object.prototype.clone = function() {
+    return JSON.parse(JSON.stringify(this));
+};
+
+/**
+ * Quick Deep Compare
+ */
+Object.prototype.compare = function(other) {
+    return JSON.stringify(this) === JSON.stringify(other);
+};
+
+/**
  * Base API constructor
  * Holds all gamecube controllers and give the events
  * @constructor
@@ -180,7 +194,7 @@ Controller.prototype.poll = function (data) {
     var me = this;
 
     // save current state
-    this.prev = this.current;
+    this.prev = this.current.clone();
 
     // Check the buttons
     buttons.forEach(function (button, key) {
@@ -192,6 +206,7 @@ Controller.prototype.poll = function (data) {
         // set new val
         me.current[ button ] = val;
     });
+
     /*
      // Pressure of Shoulders
      controller.current.pressure.l = data[port].axes[2]
@@ -229,7 +244,7 @@ Controller.prototype.poll = function (data) {
      */
 
     // check for changes
-    this.change = (controller.prev == controller.current);
+    this.change = !this.current.compare(this.prev);
 };
 
 // export new instance
