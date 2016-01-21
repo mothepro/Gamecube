@@ -129,12 +129,100 @@ Gamecube.prototype.size = function() {
  * Update info for every controller
  */
 Gamecube.prototype.poll = function () {
-    var data = this.get.apply(navigator),
-        status = [];
+    var me = this,
+        data = this.get.apply(navigator),
+        status = [],
+        emitList = [];
 
+    // Poll and get controller stats
     this.controllers.forEach(function (controller, port) {
         controller.poll(data[port]);
-        status.push(controller.status());
+        status[port] = controller.status();
+    });
+
+    // Emit based on controller status
+    status.forEach(function (stat, port) {
+        // Overall Change
+        //emitList.push({
+        //    port: port,
+        //    key: 'change',
+        //    action: stat.change,
+        //});
+
+        // Buttons
+        buttons.forEach(function (button) {
+            var action = 'idle';
+            switch(stat[button]) {
+                case 0: action = 'idle'; break;
+                case 1: action = 'release'; break;
+                case 2: action = 'press'; break;
+                case 3: action = 'hold'; break;
+            }
+
+            emitList.push({
+                port: port,
+                key: button,
+                action: action,
+            })
+        });
+
+        // Shoulders
+        ['l', 'r'].forEach(function (k) {
+            var action = 'idle';
+            switch (stat.pressure[k]) {
+                case -1: action = 'decrease'; break;
+                case 0:  action = 'idle'; break;
+                case 1:  action = 'increase'; break;
+            }
+            emitList.push({
+                port: port,
+                key: 'pressure:' + k,
+                action: action,
+                arg: [me.controllers[port].current.pressure[k]],
+            });
+        });
+
+        // Sticks
+        axes.forEach(function (s) {
+            var action;
+            [1, 2, 4, 8].forEach(function (direction) {
+                if(stat.angle[s] & direction) { // only if you ware moving that direction
+                    switch(direction) {
+                        case 1: action = 'up'; break;
+                        case 2: action = 'down'; break;
+                        case 4: action = 'left'; break;
+                        case 8: action = 'right'; break;
+                    }
+                    emitList.push({
+                        port: port,
+                        key: 'angle:' + s,
+                        action: action,
+                        arg: [
+                            me.controllers[port].current.angle[s],
+                            me.controllers[port].current.pressure[s]
+                        ],
+                    });
+                }
+            });
+        });
+    });
+
+    // Emit the Emit List
+    emitList.forEach(function (e) {
+        if(e.action !== 'idle') { // skip idles
+            var name = util.format('%s:%s', e.key, e.action),
+                args = e.arg || [];
+
+            // Emit on the any port
+            args.unshift(e.port);
+            args.unshift(util.format('any:%s', name));
+            me.emit.apply(me, args);
+
+            // Port specific
+            args.splice(0, 2);
+            args.unshift(util.format('%d:%s', e.port, name));
+            me.emit.apply(me, args);
+        }
     });
 };
 
