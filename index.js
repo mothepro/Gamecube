@@ -13,6 +13,7 @@ const axes = ['stick'];
 
 // Gamecube can emit events
 util.inherits(Gamecube, EventEmitter);
+util.inherits(Controller, EventEmitter);
 
 /**
  * Base API constructor
@@ -36,7 +37,7 @@ function Gamecube() {
 /**
  * Connect all controllers, and begin polling
  */
-Gamecube.prototype.start = function () {
+Gamecube.prototype.start = function (fps) {
     var me = this,
         test = function () { // Check for controller
             var gamepads = me.get.apply(navigator);
@@ -66,13 +67,16 @@ Gamecube.prototype.start = function () {
         window.msRequestAnimationFrame ||
         window.oRequestAnimationFrame;
 
-    if(rAF)
+    if(rAF && typeof fps !== "number")
         rAF(function r() { // Request frame, then poll
             me.poll.call(me);
             rAF(r);
         });
-    else
-        setInterval(this.poll.bind(this), FPS);
+    else {
+        if (fps <= 0)
+            fps = FPS;
+        setInterval(this.poll.bind(this), fps);
+    }
 };
 
 /**
@@ -115,85 +119,8 @@ Gamecube.prototype.poll = function () {
         me = this;
 
     this.controllers.forEach(function (controller, port) {
-        // save current state
-        controller.prev = controller.current;
-
-        // Check the buttons
-        buttons.forEach(function (button, key) {
-            var val = data[port].buttons[key],
-                prev;
-            if(typeof val === 'object')
-                val = val.pressed;
-
-            // set new val
-            controller.current[button] = val;
-            prev = controller.prev[ button ];
-
-            if(val)
-                console.log(prev, button, controller);
-
-            // emit events
-            if(val) {
-                if(controller.prev[ button ]) {// Hold - Holding a button
-                    me.emit(util.format('%d:%s:hold', port, button));
-                    //this.emit(util.format('any:%s:hold', button));
-                } else { // Press - Just tapped the button
-                    me.emit(util.format('%d:%s:press', port, button));
-                    //this.emit(util.format('any:%s:press', button));
-                }
-            } else {
-                if(controller.prev[ button ]) { // Release - no longer holding button
-                    me.emit(util.format('%d:%s:release', port, button));
-                    //this.emit(util.format('any:%s:release', button));
-                } else { // Idle - not pressing button
-                    me.emit(util.format('%d:%s:idle', port, button));
-                }
-            }
-        });
-/*
-        // Pressure of Shoulders
-        controller.current.pressure.l = data[port].axes[2]
-
-        // Check the stick
-        controller.current.stick.x = data[port].axes[0];
-        controller.current.stick.y = data[port].axes[1];
-
-        if(controller.current.stick.y === controller.prev.stick.y
-        && controller.current.stick.x === controller.prev.stick.x) { // no change
-            controller.current.stick.pressure = controller.current.prev.pressure;
-            controller.current.stick.angle = controller.prev.stick.angle;
-        } else { // compute new values
-            controller.current.stick.pressure = Math.sqrt(controller.current.stick.x*controller.current.stick.x + controller.current.stick.y*controller.current.stick.y);
-            controller.current.stick.angle = Math.atan2(controller.current.stick.x, controller.current.stick.y);
-        }
-        axes.forEach(function (axis, key) {
-            var val = ;
-            if(typeof val === 'object')
-                val = val.pressed;
-
-            controller.current[ axis ] = val; // set new val
-
-            // emit events
-            if(val) {
-                if(controller.prev[ axis ]) // Changes
-                    this.emit(util.format('%d:%s:', port, axis));
-                else // Press
-                    this.emit(util.format('%d:%c:press', port, axis));
-            } else {
-                if(controller.prev[ axis ]) // Release
-                    this.emit(util.format('%d:%c:release', port, axis));
-            }
-        });
-*/
-        // save current state
-        this.controllers[port].prev = this.controllers[port].current;
-
-        // update new state
-        this.controllers[port].current = controller.current;
-
-        // check for changes
-        this.controllers[port].change = (controller.prev == controller.current);
-    }, this);
+        controller.poll(data[port]);
+    });
 };
 
 /**
@@ -248,6 +175,62 @@ function Controller(index) {
     this.prev = this.current;
     this.change = false;
 }
+
+Controller.prototype.poll = function (data) {
+    var me = this;
+
+    // save current state
+    this.prev = this.current;
+
+    // Check the buttons
+    buttons.forEach(function (button, key) {
+        var val = data.buttons[key];
+
+        if(typeof val === 'object')
+            val = val.pressed;
+
+        // set new val
+        me.current[ button ] = val;
+    });
+    /*
+     // Pressure of Shoulders
+     controller.current.pressure.l = data[port].axes[2]
+
+     // Check the stick
+     controller.current.stick.x = data[port].axes[0];
+     controller.current.stick.y = data[port].axes[1];
+
+     if(controller.current.stick.y === controller.prev.stick.y
+     && controller.current.stick.x === controller.prev.stick.x) { // no change
+     controller.current.stick.pressure = controller.current.prev.pressure;
+     controller.current.stick.angle = controller.prev.stick.angle;
+     } else { // compute new values
+     controller.current.stick.pressure = Math.sqrt(controller.current.stick.x*controller.current.stick.x + controller.current.stick.y*controller.current.stick.y);
+     controller.current.stick.angle = Math.atan2(controller.current.stick.x, controller.current.stick.y);
+     }
+     axes.forEach(function (axis, key) {
+     var val = ;
+     if(typeof val === 'object')
+     val = val.pressed;
+
+     controller.current[ axis ] = val; // set new val
+
+     // emit events
+     if(val) {
+     if(controller.prev[ axis ]) // Changes
+     this.emit(util.format('%d:%s:', port, axis));
+     else // Press
+     this.emit(util.format('%d:%c:press', port, axis));
+     } else {
+     if(controller.prev[ axis ]) // Release
+     this.emit(util.format('%d:%c:release', port, axis));
+     }
+     });
+     */
+
+    // check for changes
+    this.change = (controller.prev == controller.current);
+};
 
 // export new instance
 module.exports = new Gamecube;
