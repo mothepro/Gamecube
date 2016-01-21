@@ -8,8 +8,7 @@ const util = require( 'util' );
 
 const FPS = Math.floor(1000 / 60); // 60 FPS
 
-const buttons = ['a'];
-const axes = ['stick'];
+const buttons = ['a', 'b', 'x', 'y', 'z', 'r', 'l', 'start', 'up', 'down', 'left', 'right'];
 
 // Gamecube can emit events
 util.inherits(Gamecube, EventEmitter);
@@ -130,10 +129,11 @@ Gamecube.prototype.size = function() {
  */
 Gamecube.prototype.poll = function () {
     var data = this.get.apply(navigator),
-        me = this;
+        status = [];
 
     this.controllers.forEach(function (controller, port) {
         controller.poll(data[port]);
+        status.push(controller.status());
     });
 };
 
@@ -190,6 +190,10 @@ function Controller(index) {
     this.change = false;
 }
 
+/**
+ * Store info from api into the controller
+ * @param data API info on this controller
+ */
 Controller.prototype.poll = function (data) {
     var me = this;
 
@@ -207,44 +211,36 @@ Controller.prototype.poll = function (data) {
         me.current[ button ] = val;
     });
 
-    /*
-     // Pressure of Shoulders
-     controller.current.pressure.l = data[port].axes[2]
+    // Check Pressure of Shoulders
+    this.current.pressure.l = data.axes[2];
+    this.current.pressure.r = data.axes[5];
 
-     // Check the stick
-     controller.current.stick.x = data[port].axes[0];
-     controller.current.stick.y = data[port].axes[1];
+    // Check the sticks
+    this.current.stick.x = data.axes[0];
+    this.current.stick.y = data.axes[1];
 
-     if(controller.current.stick.y === controller.prev.stick.y
-     && controller.current.stick.x === controller.prev.stick.x) { // no change
-     controller.current.stick.pressure = controller.current.prev.pressure;
-     controller.current.stick.angle = controller.prev.stick.angle;
-     } else { // compute new values
-     controller.current.stick.pressure = Math.sqrt(controller.current.stick.x*controller.current.stick.x + controller.current.stick.y*controller.current.stick.y);
-     controller.current.stick.angle = Math.atan2(controller.current.stick.x, controller.current.stick.y);
-     }
-     axes.forEach(function (axis, key) {
-     var val = ;
-     if(typeof val === 'object')
-     val = val.pressed;
+    this.current.cStick.x = data.axes[3];
+    this.current.cStick.y = data.axes[4];
 
-     controller.current[ axis ] = val; // set new val
-
-     // emit events
-     if(val) {
-     if(controller.prev[ axis ]) // Changes
-     this.emit(util.format('%d:%s:', port, axis));
-     else // Press
-     this.emit(util.format('%d:%c:press', port, axis));
-     } else {
-     if(controller.prev[ axis ]) // Release
-     this.emit(util.format('%d:%c:release', port, axis));
-     }
-     });
-     */
+    // Find Pressure and Angle on sticks
+    ['stick', 'cStick'].forEach(function(s) {
+        if(me.current[s].compare(me.prev[s])) { // no change
+            me.current.pressure[s]  = me.prev.pressure[s];
+            me.current.angle[s]     = me.prev.angle[s];
+        } else { // compute new values
+            me.current.pressure[s]  = Math.sqrt(me.current[s].x*me.current[s].x + me.current[s].y*me.current[s].y);
+            me.current.angle[s]     = Math.atan2(me.current[s].x, me.current[s].y);
+        }
+    });
 
     // check for changes
     this.change = !this.current.compare(this.prev);
+};
+
+/**
+ * Find status of the controller
+ */
+Controller.prototype.status = function () {
 };
 
 // export new instance
