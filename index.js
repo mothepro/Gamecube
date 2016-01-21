@@ -176,7 +176,7 @@ Gamecube.prototype.poll = function () {
             }
             emitList.push({
                 port: port,
-                key: 'pressure:' + k,
+                key: k + ':pressure:',
                 action: action,
                 arg: [me.controllers[port].current.pressure[k]],
             });
@@ -195,7 +195,7 @@ Gamecube.prototype.poll = function () {
                     }
                     emitList.push({
                         port: port,
-                        key: 'angle:' + s,
+                        key: s,
                         action: action,
                         arg: [
                             me.controllers[port].current.angle[s],
@@ -204,10 +204,23 @@ Gamecube.prototype.poll = function () {
                     });
                 }
             });
+
+            if(stat.angle[s]) { // any direction
+                emitList.push({
+                    port: port,
+                    key: s,
+                    action: 'move',
+                    arg: [
+                        me.controllers[port].current.angle[s],
+                        me.controllers[port].current.pressure[s]
+                    ],
+                });
+            }
         });
     });
 
     // Emit the Emit List
+    // @TODO emit on elements of Gamecube instead
     emitList.forEach(function (e) {
         if(e.action !== 'idle') { // skip idles
             var name = util.format('%s:%s', e.key, e.action),
