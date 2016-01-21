@@ -9,6 +9,7 @@ const util = require( 'util' );
 const FPS = Math.floor(1000 / 60); // 60 FPS
 
 const buttons = ['a', 'b', 'x', 'y', 'z', 'r', 'l', 'start', 'up', 'down', 'left', 'right'];
+const axes = ['stick', 'cStick'];
 
 // Gamecube can emit events
 util.inherits(Gamecube, EventEmitter);
@@ -223,7 +224,7 @@ Controller.prototype.poll = function (data) {
     this.current.cStick.y = data.axes[4];
 
     // Find Pressure and Angle on sticks
-    ['stick', 'cStick'].forEach(function(s) {
+    axes.forEach(function(s) {
         if(me.current[s].compare(me.prev[s])) { // no change
             me.current.pressure[s]  = me.prev.pressure[s];
             me.current.angle[s]     = me.prev.angle[s];
@@ -239,8 +240,76 @@ Controller.prototype.poll = function (data) {
 
 /**
  * Find status of the controller
+ * @TODO thresholds
+ *
+ * Buttons:
+ *  0 = No change - Idle
+ *  1 = Change    - Release
+ *  2 = Change    - Press
+ *  3 = No change - Hold
+ *
+ * Pressure (Shoulders & Sticks):
+ *  -1 = Change    - Decrease in Pressure
+ *  0  = No Change - No Pressure
+ *  1  = Change    - Increase in Pressure
+ *
+ * Angles:
+ *  bit 0 (RMB): Up
+ *  bit 1: Down
+ *  bit 2: Left
+ *  bit 3: Right
  */
 Controller.prototype.status = function () {
+    var me = this,
+        ret = {
+            a: 0,
+            b: 0,
+            x: 0,
+            y: 0,
+
+            z: 0,
+            l: 0,
+            r: 0,
+
+            start: 0,
+
+            up: 0,
+            down: 0,
+            left: 0,
+            right: 0,
+
+            pressure: {
+                l: 0,
+                r: 0,
+                stick: 0,
+                cStick: 0
+            },
+
+            angle: {
+                stick: 0,
+                cStick: 0,
+            },
+        };
+
+    ret.change = this.change;
+
+    //if(this.change) {
+        buttons.forEach(function (button) {
+            ret[button] = (me.current[button] << 1) | me.prev[button];
+        });
+
+        ret.pressure.l = Math.sign(this.current.pressure.l - this.prev.pressure.l);
+        ret.pressure.r = Math.sign(this.current.pressure.r - this.prev.pressure.r);
+
+        axes.forEach(function (s) {
+            if(me.current[s].y < -0.1) ret.angle[s] |= 1;
+            if(me.current[s].y > 0.1) ret.angle[s] |= 2;
+            if(me.current[s].x < -0.1) ret.angle[s] |= 4;
+            if(me.current[s].x > 0.1) ret.angle[s] |= 8;
+        });
+    //}
+
+    return ret;
 };
 
 // export new instance
