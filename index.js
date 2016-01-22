@@ -136,6 +136,19 @@ Gamecube.prototype.remove = function(index) {
 };
 
 /**
+ * Calibrate a controller
+ * If no index, calibrate all
+ */
+Gamecube.prototype.calibrate = function(index) {
+    if(typeof index === 'number')
+        this.controllers[index].calibrate();
+
+
+    for(var i=0; i<this.controllers.length; i++)
+        this.controllers[i].calibrate();
+};
+
+/**
  * Check if we have a controller
  */
 Gamecube.prototype.has = function(index) {
@@ -368,14 +381,14 @@ Controller.prototype.poll = function (data) {
 Controller.prototype.calibrate = function() {
     this.poll();
 
-    this.calibrate.l = this.current.pressure.l;
-    this.calibrate.r = this.current.pressure.r;
+    this.calibrate.l = -this.current.pressure.l;
+    this.calibrate.r = -this.current.pressure.r;
 
-    this.calibrate.stick.x = this.current.stick.x;
-    this.calibrate.stick.y = this.current.stick.y;
+    this.calibrate.stick.x = -this.current.stick.x;
+    this.calibrate.stick.y = -this.current.stick.y;
 
-    this.calibrate.cStick.x = this.current.cStick.x;
-    this.calibrate.cStick.y = this.current.cStick.y;
+    this.calibrate.cStick.x = -this.current.cStick.x;
+    this.calibrate.cStick.y = -this.current.cStick.y;
 };
 
 /**
