@@ -48,6 +48,14 @@ function Gamecube() {
     process.on('exit', this.remove()); //Gamecube.remove.bind(this));
 }
 
+/**
+ * Emit across gamecube
+ * @param port
+ * @param key
+ * @param action
+ * @param args
+ * @private
+ */
 Gamecube.prototype._emit = function (port, key, action, args) {
     if(action !== 'idle') { // skip idles
         if(typeof args === 'undefined')
@@ -143,9 +151,10 @@ Gamecube.prototype.calibrate = function(index) {
     if(typeof index === 'number')
         this.controllers[index].calibrate();
 
-
-    for(var i=0; i<this.controllers.length; i++)
-        this.controllers[i].calibrate();
+    this.controllers.forEach(function (c) {
+        console.log(c);
+        c.calibrate();
+    });
 };
 
 /**
@@ -264,6 +273,17 @@ Gamecube.prototype.poll = function () {
 };
 
 /**
+ * Shortcuts to emitter
+ * /
+var shortcut = function(name) {
+    return function(cb) {
+        return this.on(name, cb);
+    }
+};
+Gamecube.prototype.connect = shortcut('any:plug:connected');
+Gamecube.prototype.any.a.press = shortcut('any:a:press');
+
+/**
  * Base API for a controller
  * processes input directly
  * @param index
@@ -314,7 +334,7 @@ function Controller(index) {
     };
     this.prev = this.current;
     this.change = false;
-    this.calibrate = {
+    this.offset = {
         l: 0.0,
         r: 0.0,
         stick: {
@@ -332,7 +352,7 @@ function Controller(index) {
  * Store info from api into the controller
  * @param data API info on this controller
  */
-Controller.prototype.poll = function (data) {
+Controller.prototype.poll = function (data, calibrate) {
     var me = this;
 
     // save current state
@@ -343,22 +363,24 @@ Controller.prototype.poll = function (data) {
         var val = data.buttons[key];
 
         if(typeof val === 'object')
-            val = val.pressed;
+            { //noinspection JSUnresolvedVariable
+                val = val.pressed;
+            }
 
         // set new val
         me.current[ button ] = val;
     });
 
     // Check Pressure of Shoulders
-    this.current.pressure.l = data.axes[2] + this.calibrate.l;
-    this.current.pressure.r = data.axes[5] + this.calibrate.r;
+    this.current.pressure.l = data.axes[2] + this.offset.l;
+    this.current.pressure.r = data.axes[5] + this.offset.r;
 
     // Check the sticks
-    this.current.stick.x = data.axes[0] + this.calibrate.stick.x;
-    this.current.stick.y = data.axes[1] + this.calibrate.stick.y;
+    this.current.stick.x = data.axes[0] + this.offset.stick.x;
+    this.current.stick.y = data.axes[1] + this.offset.stick.y;
 
-    this.current.cStick.x = data.axes[3] + this.calibrate.cStick.x;
-    this.current.cStick.y = data.axes[4] + this.calibrate.cStick.y;
+    this.current.cStick.x = data.axes[3] + this.offset.cStick.x;
+    this.current.cStick.y = data.axes[4] + this.offset.cStick.y;
 
     // Find Pressure and Angle on sticks
     axes.forEach(function(s) {
@@ -371,6 +393,9 @@ Controller.prototype.poll = function (data) {
         }
     });
 
+    if(calibrate)
+        this.calibrate();
+
     // check for changes
     this.change = !this.current.compare(this.prev);
 };
@@ -379,16 +404,14 @@ Controller.prototype.poll = function (data) {
  * Reset axes neutral position to 0
  */
 Controller.prototype.calibrate = function() {
-    this.poll();
+    this.offset.l = -this.current.pressure.l;
+    this.offset.r = -this.current.pressure.r;
 
-    this.calibrate.l = -this.current.pressure.l;
-    this.calibrate.r = -this.current.pressure.r;
+    this.offset.stick.x = -this.current.stick.x;
+    this.offset.stick.y = -this.current.stick.y;
 
-    this.calibrate.stick.x = -this.current.stick.x;
-    this.calibrate.stick.y = -this.current.stick.y;
-
-    this.calibrate.cStick.x = -this.current.cStick.x;
-    this.calibrate.cStick.y = -this.current.cStick.y;
+    this.offset.cStick.x = -this.current.cStick.x;
+    this.offset.cStick.y = -this.current.cStick.y;
 };
 
 /**

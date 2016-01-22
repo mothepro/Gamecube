@@ -1,13 +1,14 @@
-var gc = require('..');
+window.gc = require('..');
 
 gc.start();
 
-gc.on('2:a:press', function () {
-    console.log('.press')
-}).on('2:a:release', function () {
-    console.log('.release')
-}).on('2:a:hold', function () {
-    console.log('.hold')
-}).on('2:a:idle', function () {
-    console.log('.idle')
+gc.on('any:plug:connect', function(port) {
+    alert('Welcome Player ', port)
+}).on('any:a:press', function (port) {
+    temp = path3203.style.fill;
+    path3203.style.fill = 'white'
+}).on('any:a:release', function (port) {
+    path3203.style.fill = temp;
+}).on('any:stick:move', function (port, angle, pressure) {
+    console.log(port, angle, pressure)
 });
