@@ -48,6 +48,25 @@ function Gamecube() {
     process.on('exit', this.remove()); //Gamecube.remove.bind(this));
 }
 
+Gamecube.prototype._emit = function (port, key, action, args) {
+    if(action !== 'idle') { // skip idles
+        if(typeof args === 'undefined')
+            args = [];
+
+        var name = util.format('%s:%s', key, action);
+
+        // Emit on the any port
+        args.unshift(port);
+        args.unshift(util.format('any:%s', name));
+        this.emit.apply(this, args);
+
+        // Port specific
+        args.splice(0, 2);
+        args.unshift(util.format('%d:%s', port, name));
+        this.emit.apply(this, args);
+    }
+};
+
 /**
  * Connect all controllers, and begin polling
  */
@@ -98,6 +117,7 @@ Gamecube.prototype.start = function (fps) {
  */
 Gamecube.prototype.add = function(index) {
     this.controllers[ index ] = new Controller(index);
+    this._emit(index, 'plug', 'connected');
 };
 
 /**
@@ -105,10 +125,14 @@ Gamecube.prototype.add = function(index) {
  * If no index, remove all
  */
 Gamecube.prototype.remove = function(index) {
-    if(typeof index === 'number')
+    if(typeof index === 'number') {
         this.controllers.splice(index, 1);
-    else
+        this._emit(index, 'plug', 'disconnected');
+    } else {
+        for(var i=0; i<this.controllers.length; i++)
+            this._emit(i, 'plug', 'disconnected');
         this.controllers = [];
+    }
 };
 
 /**
@@ -222,20 +246,7 @@ Gamecube.prototype.poll = function () {
     // Emit the Emit List
     // @TODO emit on elements of Gamecube instead
     emitList.forEach(function (e) {
-        if(e.action !== 'idle') { // skip idles
-            var name = util.format('%s:%s', e.key, e.action),
-                args = e.arg || [];
-
-            // Emit on the any port
-            args.unshift(e.port);
-            args.unshift(util.format('any:%s', name));
-            me.emit.apply(me, args);
-
-            // Port specific
-            args.splice(0, 2);
-            args.unshift(util.format('%d:%s', e.port, name));
-            me.emit.apply(me, args);
-        }
+        me._emit(e.port, e.key, e.action, e.arg);
     });
 };
 
@@ -290,6 +301,18 @@ function Controller(index) {
     };
     this.prev = this.current;
     this.change = false;
+    this.calibrate = {
+        l: 0.0,
+        r: 0.0,
+        stick: {
+            x: 0.0,
+            y: 0.0,
+        },
+        cStick: {
+            x: 0.0,
+            y: 0.0
+        }
+    };
 }
 
 /**
@@ -314,15 +337,15 @@ Controller.prototype.poll = function (data) {
     });
 
     // Check Pressure of Shoulders
-    this.current.pressure.l = data.axes[2];
-    this.current.pressure.r = data.axes[5];
+    this.current.pressure.l = data.axes[2] + this.calibrate.l;
+    this.current.pressure.r = data.axes[5] + this.calibrate.r;
 
     // Check the sticks
-    this.current.stick.x = data.axes[0];
-    this.current.stick.y = data.axes[1];
+    this.current.stick.x = data.axes[0] + this.calibrate.stick.x;
+    this.current.stick.y = data.axes[1] + this.calibrate.stick.y;
 
-    this.current.cStick.x = data.axes[3];
-    this.current.cStick.y = data.axes[4];
+    this.current.cStick.x = data.axes[3] + this.calibrate.cStick.x;
+    this.current.cStick.y = data.axes[4] + this.calibrate.cStick.y;
 
     // Find Pressure and Angle on sticks
     axes.forEach(function(s) {
@@ -337,6 +360,22 @@ Controller.prototype.poll = function (data) {
 
     // check for changes
     this.change = !this.current.compare(this.prev);
+};
+
+/**
+ * Reset axes neutral position to 0
+ */
+Controller.prototype.calibrate = function() {
+    this.poll();
+
+    this.calibrate.l = this.current.pressure.l;
+    this.calibrate.r = this.current.pressure.r;
+
+    this.calibrate.stick.x = this.current.stick.x;
+    this.calibrate.stick.y = this.current.stick.y;
+
+    this.calibrate.cStick.x = this.current.cStick.x;
+    this.calibrate.cStick.y = this.current.cStick.y;
 };
 
 /**
