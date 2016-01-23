@@ -1,4 +1,10 @@
-window.gc = require('..');
+var fs = require('fs');
+var gc = require('../..');
+
+// blank gamecube controller image
+var file = fs.readFileSync(__dirname+'/' + 'Gamecube.svg', 'utf8'),
+    parser = new DOMParser(),
+    svg = parser.parseFromString(file, 'text/xml');
 
 gc.start();
 
@@ -12,3 +18,8 @@ gc.on('any:plug:connect', function(port) {
 }).on('any:stick:move', function (port, angle, pressure) {
     console.log(port, angle, pressure)
 });
+
+
+// make the gc global
+if(typeof window !== 'undefined')
+    window.gc = gc;
