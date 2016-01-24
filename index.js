@@ -296,12 +296,31 @@ Gamecube.prototype.poll = function () {
         axes.forEach(function (s) {
             var action;
             [1, 2, 4, 8].forEach(function (direction) {
-                if(stat.angle[s] & direction) { // only if you ware moving that direction
+                if(stat.angle[s] & direction) { // only if you are moving that direction
                     switch(direction) {
                         case 1: action = 'up'; break;
                         case 2: action = 'down'; break;
                         case 4: action = 'left'; break;
                         case 8: action = 'right'; break;
+                    }
+                    emitList.push({
+                        port: port,
+                        key: s,
+                        action: action,
+                        arg: [
+                            me.controllers[port].current.angle[s],
+                            me.controllers[port].current.pressure[s]
+                        ],
+                    });
+                }
+
+
+                if(stat.relAngle[s] & direction) { // only if you are moving that direction
+                    switch(direction) {
+                        case 1: action = 'pushUp'; break;
+                        case 2: action = 'pushDown'; break;
+                        case 4: action = 'pushLeft'; break;
+                        case 8: action = 'pushRight'; break;
                     }
                     emitList.push({
                         port: port,
@@ -320,6 +339,24 @@ Gamecube.prototype.poll = function () {
                     port: port,
                     key: s,
                     action: 'move',
+                    arg: [
+                        me.controllers[port].current.angle[s],
+                        me.controllers[port].current.pressure[s]
+                    ],
+                });
+            } else {
+                emitList.push({
+                    port: port,
+                    key: s,
+                    action: 'idle',
+                });
+            }
+
+            if(stat.relAngle[s]) { // relative in any direction
+                emitList.push({
+                    port: port,
+                    key: s,
+                    action: 'change',
                     arg: [
                         me.controllers[port].current.angle[s],
                         me.controllers[port].current.pressure[s]
@@ -432,7 +469,7 @@ function Controller(index) {
     // alias for sticks
     axes.forEach(function (axis) {
         me[axis] = new EventEmitter;
-        ['move', 'up', 'down', 'left', 'right'].forEach(function (action) {
+        ['move', 'change', 'idle', 'up', 'down', 'left', 'right', 'pushUp', 'pushDown', 'pushLeft', 'pushRight'].forEach(function (action) {
             me[axis][action] = shortcut(util.format('%s:%s', axis, action));
         });
     });
@@ -556,6 +593,11 @@ Controller.prototype.status = function () {
                 stick: 0,
                 cStick: 0,
             },
+
+            relAngle: {
+                stick: 0,
+                cStick: 0,
+            },
         };
 
     ret.change = this.change;
@@ -573,6 +615,12 @@ Controller.prototype.status = function () {
             if(me.current[s].y > 0.1) ret.angle[s] |= 2;
             if(me.current[s].x < -0.1) ret.angle[s] |= 4;
             if(me.current[s].x > 0.1) ret.angle[s] |= 8;
+
+            // Relative to current
+            if(me.current[s].y < me.prev[s].y) ret.relAngle[s] |= 1;
+            if(me.current[s].y > me.prev[s].y) ret.relAngle[s] |= 2;
+            if(me.current[s].x < me.prev[s].x) ret.relAngle[s] |= 4;
+            if(me.current[s].x > me.prev[s].x) ret.relAngle[s] |= 8;
         });
     //}
 
