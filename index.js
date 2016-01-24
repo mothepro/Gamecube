@@ -64,7 +64,7 @@ Gamecube.prototype._emit = function (port, key, action, args) {
         var name = util.format('%s:%s', key, action);
 
         // Emit on the any port
-        args.unshift(port);
+        args.unshift(this.controllers[ port ]);
         args.unshift(util.format('any:%s', name));
         this.emit.apply(this, args);
 
@@ -72,6 +72,19 @@ Gamecube.prototype._emit = function (port, key, action, args) {
         args.splice(0, 2);
         args.unshift(util.format('%d:%s', port, name));
         this.emit.apply(this, args);
+
+        // emit on the controller as well
+        args.unshift(name);
+        this.controllers[port].emit.apply(this.controllers[port], args);
+    }
+};
+
+/**
+ * Shortcuts to emitter
+ */
+var shortcut = function(name) {
+    return function(cb) {
+        return this.on(name, cb);
     }
 };
 
@@ -118,6 +131,8 @@ Gamecube.prototype.start = function (fps) {
             fps = FPS;
         setInterval(this.poll.bind(this), fps);
     }
+
+    return this;
 };
 
 /**
@@ -126,6 +141,7 @@ Gamecube.prototype.start = function (fps) {
 Gamecube.prototype.add = function(index) {
     this.controllers[ index ] = new Controller(index);
     this._emit(index, 'plug', 'connected');
+    return this;
 };
 
 /**
@@ -141,6 +157,7 @@ Gamecube.prototype.remove = function(index) {
             this._emit(i, 'plug', 'disconnected');
         this.controllers = [];
     }
+    return this;
 };
 
 /**
@@ -155,6 +172,8 @@ Gamecube.prototype.calibrate = function(index) {
         console.log(c);
         c.calibrate();
     });
+
+    return this;
 };
 
 /**
@@ -272,16 +291,8 @@ Gamecube.prototype.poll = function () {
     });
 };
 
-/**
- * Shortcuts to emitter
- * /
-var shortcut = function(name) {
-    return function(cb) {
-        return this.on(name, cb);
-    }
-};
 Gamecube.prototype.connect = shortcut('any:plug:connected');
-Gamecube.prototype.any.a.press = shortcut('any:a:press');
+Gamecube.prototype.disconnect = shortcut('any:plug:disconnected');
 
 /**
  * Base API for a controller
@@ -292,6 +303,8 @@ Gamecube.prototype.any.a.press = shortcut('any:a:press');
 function Controller(index) {
     if(typeof index === 'undefined')
         throw Error('An index must be given');
+
+    EventEmitter.call(this);
 
     this.i = index;
     this.current = {
@@ -351,6 +364,7 @@ function Controller(index) {
 /**
  * Store info from api into the controller
  * @param data API info on this controller
+ * @param calibrate will calibrate if true
  */
 Controller.prototype.poll = function (data, calibrate) {
     var me = this;
