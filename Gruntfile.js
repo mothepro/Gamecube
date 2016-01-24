@@ -23,7 +23,7 @@ module.exports = function(grunt) {
                 tasks: ['build']
             }
         },
-        clean: ['example/bundle.js', 'example/bundle.min.js']
+        clean: ['example/bundle.js'] //, 'example/bundle.min.js']
     });
 
     // Load the npm tasks
@@ -33,6 +33,6 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-contrib-clean');
 
     // Tasks task(s).
-    grunt.registerTask('build', ['clean', 'browserify', 'clean:0']);
+    grunt.registerTask('build', ['clean', 'browserify']);
     grunt.registerTask('default', ['watch']);
 };
