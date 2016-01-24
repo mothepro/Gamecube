@@ -192,7 +192,7 @@ Gamecube.prototype.calibrate = function(index) {
  * Check if we have a controller
  */
 Gamecube.prototype.has = function(index) {
-    return !!typeof this.controllers[index] === 'undefined';
+    return typeof this.controllers[index] === 'undefined';
 };
 
 /**
@@ -413,7 +413,7 @@ function Controller(index) {
     me.disconnect = shortcut('plug:disconnected');
 
     // aliases for buttons
-    btnPlus = buttons.clone(); btnPlus.push('button');
+    var btnPlus = buttons.clone(); btnPlus.push('button');
     btnPlus.forEach(function (button) {
         me[button] = new EventEmitter;
         ['change', 'press', 'hold', 'release'].forEach(function (action) {
