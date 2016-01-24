@@ -46,6 +46,22 @@ function Gamecube() {
 
     // disconnect on close
     process.on('exit', this.remove()); //Gamecube.remove.bind(this));
+
+    /**
+     * Shortcuts to emitter
+     * @param name name of event
+     * @private
+     */
+    var me = this,
+        shortcut = function(name) {
+        return function(cb) {
+            return me.on(name, cb);
+        }
+    };
+
+    // shortcuts
+    Gamecube.prototype.connect = shortcut('any:plug:connected');
+    Gamecube.prototype.disconnect = shortcut('any:plug:disconnected');
 }
 
 /**
@@ -74,17 +90,14 @@ Gamecube.prototype._emit = function (port, key, action, args) {
         this.emit.apply(this, args);
 
         // emit on the controller as well
-        args.unshift(name);
+        args[0] = name;
         this.controllers[port].emit.apply(this.controllers[port], args);
-    }
-};
 
-/**
- * Shortcuts to emitter
- */
-var shortcut = function(name) {
-    return function(cb) {
-        return this.on(name, cb);
+        // emit on the key on the controller as well
+        if(key !== 'plug') {
+            args[0] = action;
+            this.controllers[port][key].emit.apply(this.controllers[port][key], args);
+        }
     }
 };
 
@@ -169,7 +182,6 @@ Gamecube.prototype.calibrate = function(index) {
         this.controllers[index].calibrate();
 
     this.controllers.forEach(function (c) {
-        console.log(c);
         c.calibrate();
     });
 
@@ -228,7 +240,32 @@ Gamecube.prototype.poll = function () {
                 port: port,
                 key: button,
                 action: action,
-            })
+            });
+
+            // report that a button has this event
+            emitList.push({
+                port: port,
+                key: 'button',
+                action: action,
+                arg: [button]
+            });
+
+            if(stat[button] === 1 || stat[button] === 2) {
+                emitList.push({
+                    port: port,
+                    key: button,
+                    action: 'change',
+                    arg: [stat[button]]
+                });
+
+                // a button is doing this change
+                emitList.push({
+                    port: port,
+                    key: 'button',
+                    action: 'change',
+                    arg: [button, stat[button]]
+                });
+            }
         });
 
         // Shoulders
@@ -241,10 +278,18 @@ Gamecube.prototype.poll = function () {
             }
             emitList.push({
                 port: port,
-                key: k + ':pressure:',
+                key: k + ':pressure',
                 action: action,
                 arg: [me.controllers[port].current.pressure[k]],
             });
+
+            if(stat.pressure[k])
+                emitList.push({
+                    port: port,
+                    key: k + ':pressure',
+                    action: 'change',
+                    arg: [me.controllers[port].current.pressure[k]],
+                });
         });
 
         // Sticks
@@ -291,9 +336,6 @@ Gamecube.prototype.poll = function () {
     });
 };
 
-Gamecube.prototype.connect = shortcut('any:plug:connected');
-Gamecube.prototype.disconnect = shortcut('any:plug:disconnected');
-
 /**
  * Base API for a controller
  * processes input directly
@@ -306,7 +348,7 @@ function Controller(index) {
 
     EventEmitter.call(this);
 
-    this.i = index;
+    this.port = index;
     this.current = {
         a: false,
         b: false,
@@ -359,6 +401,41 @@ function Controller(index) {
             y: 0.0
         }
     };
+
+    // shortcuts
+    var me = this,
+        shortcut = function(name) {
+        return function(cb) {
+            return me.on(name, cb);
+        }
+    };
+
+    me.disconnect = shortcut('plug:disconnected');
+
+    // aliases for buttons
+    btnPlus = buttons.clone(); btnPlus.push('button');
+    btnPlus.forEach(function (button) {
+        me[button] = new EventEmitter;
+        ['change', 'press', 'hold', 'release'].forEach(function (action) {
+            me[button][action] = shortcut(util.format('%s:%s', button, action));
+        });
+    });
+
+    // shoulders
+    ['l', 'r'].forEach(function(but) {
+        me[but+':pressure'] = me[but].pressure = new EventEmitter;
+        ['change', 'increase', 'decrease'].forEach(function (action) {
+            me[but][action] = shortcut(util.format('%s:pressure:%s', but, action));
+        });
+    });
+
+    // alias for sticks
+    axes.forEach(function (axis) {
+        me[axis] = new EventEmitter;
+        ['move', 'up', 'down', 'left', 'right'].forEach(function (action) {
+            me[axis][action] = shortcut(util.format('%s:%s', axis, action));
+        });
+    });
 }
 
 /**
