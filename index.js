@@ -1,4 +1,5 @@
 // Browser only !
+// @TODO use "node-hid" for node env
 if(typeof window === 'undefined') // typeof module !== 'undefined' && module.exports
     throw Error('The package is for the Browser only');
 

@@ -17,7 +17,7 @@ gc
     svg = svgs[port] = svgBlank.cloneNode(true);
 
     // customize for this port
-    svg.className = ['controller', port].join(' ');
+    svg.className = 'controller port'+port;
     svg.getElementsByClassName('port num').item(0).innerHTML = port+1;
 
     // add it to HTML
@@ -80,7 +80,7 @@ gc
     svgs.splice(controller.port, 1)[0].remove();
 });
 
-// make the gc global
+// make the globals
 if(typeof window !== 'undefined') {
     window.gc = gc;
     window.svgs = svgs;
