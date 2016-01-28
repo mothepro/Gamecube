@@ -37,6 +37,17 @@ When a controller is connected
 When a controller is disconnected
 
 ## Buttons
+
+```js
+ controller.button.change(function(button, state) {});
+```
+When any button changes state
+
+ * 0 = No change - Idle
+ * 1 = Change    - Release
+ * 2 = Change    - Press
+ * 3 = No change - Hold
+
 ```js
  controller.button.press(function(button) {});
 ```
@@ -51,3 +62,25 @@ When any button is released
  controller.button.hold(function(button) {});
 ```
 When any button is held
+
+## Shoulders
+
+```js
+ controller['l:pressure'].change(function(state) {});
+```
+When the left trigger changes state (not fully pushed)
+ *  -1 = Change    - Decrease in Pressure
+ *  0  = No Change - No Pressure
+ *  1  = Change    - Increase in Pressure
+
+```js
+ controller['l:pressure'].increase(function(state) {});
+```
+When the left trigger increases pressure
+
+```js
+ controller['l:pressure'].decrease(function(state) {});
+```
+When the left trigger decreases pressure
+
+## Joysticks
