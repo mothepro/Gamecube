@@ -5,26 +5,35 @@
 
 # How to use
 ## Install
-```npm install gamecube```
+```npm install gamecube browserify```
 
 ## Usage
 After installing the package require it
-```var gc = require('gamecube');```
+```js
+var gc = require('gamecube');
+```
 
 Then start the connection with.
-if an integer is passed then the package will poll on that interval
-```gc.start()```
+```js
+gc.start([poll]);
+``` If an integer is passed then the package will poll on that interval
 
 Finally bind listeners on the events.
-```gc.connect(callback);```
+```js
+gc.connect(callback);
+```
 
 # Events
 ## Connections
-```gc.connect(function(controller) {});``` When a controller is connected
+```js
+gc.connect(function(controller) {});
+``` When a controller is connected
 
-```gc.disconnect(function(controller) {});``` When a controller is disconnected
+```js
+gc.disconnect(function(controller) {});
+``` When a controller is disconnected
 
 ## Buttons
-```controller.button.press(function(button) {});``` When any button is pressed
-```controller.button.release(function(button) {});``` When any button is released
-```controller.button.hold(function(button) {});``` When any button is held
+```js controller.button.press(function(button) {});``` When any button is pressed
+```js controller.button.release(function(button) {});``` When any button is released
+```js controller.button.hold(function(button) {});``` When any button is held
