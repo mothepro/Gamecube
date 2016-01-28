@@ -1,14 +1,15 @@
 # Gamecube Controller in JS
 > Gamecube is an interface between a plugged in gamecube controller adapter and the browser. All made with simple events
 
+## Coming Soon
+- [ ] Support in node environment
+
 # [Live Example](https://mothepro.github.io/Gamecube)
 
-# Coming Soon
-- [ ] Support in node environment
 
 # How to use
 ## Install
-```npm install gamecube browserify```
+```npm install gamecube```
 
 ## Usage
 After installing the package require it
