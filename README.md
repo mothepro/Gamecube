@@ -3,6 +3,9 @@
 
 # [Live Example](https://mothepro.github.io/Gamecube)
 
+# Coming Soon
+- [ ] Support in node environment
+
 # How to use
 ## Install
 ```npm install gamecube browserify```
@@ -19,10 +22,13 @@ Then start the connection with.
 ```
 If an integer is passed then the package will poll on that interval
 
-Finally bind listeners on the events.
+bind listeners on the events.
 ```js
  gc.connect(callback);
 ```
+
+In your app require `gamecube` like a normal dependency. Run browserify on your app and the package will be browser-ready.
+
 
 # Events
 ## Connections
@@ -74,13 +80,63 @@ When the left trigger changes state (not fully pushed)
  *  1  = Change    - Increase in Pressure
 
 ```js
- controller['l:pressure'].increase(function(state) {});
+ controller['l:pressure'].increase(function(pressure) {});
 ```
-When the left trigger increases pressure
+When the left trigger increases pressure (Between 0 & 1)
 
 ```js
- controller['l:pressure'].decrease(function(state) {});
+ controller['l:pressure'].decrease(function(pressure) {});
 ```
 When the left trigger decreases pressure
 
 ## Joysticks
+
+```js
+ controller.stick.move(function(angle, pressure) {});
+```
+When the stick is not in the neutral position
+
+```js
+ controller.stick.change(function(angle, pressure) {});
+```
+When the stick has moved since its previous position
+
+```js
+ controller.stick.up(function(angle, pressure) {});
+```
+When the stick is more upwards than downwards
+
+```js
+ controller.stick.pushUp(function(angle, pressure) {});
+```
+When the stick has moved upwards since its previous position
+
+```js
+ controller.stick.down(function(angle, pressure) {});
+```
+When the stick is more downwards than upwards
+
+```js
+ controller.stick.pushDown(function(angle, pressure) {});
+```
+When the stick has moved downwards since its previous position
+
+```js
+ controller.stick.left(function(angle, pressure) {});
+```
+When the stick is more left than right
+
+```js
+ controller.stick.pushLeft(function(angle, pressure) {});
+```
+When the stick has moved left since its previous position
+
+```js
+ controller.stick.right(function(angle, pressure) {});
+```
+When the stick is more right than left
+
+```js
+ controller.stick.pushRight(function(angle, pressure) {});
+```
+When the stick has moved right since its previous position
