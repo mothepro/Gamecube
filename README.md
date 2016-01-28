@@ -44,6 +44,19 @@ When a controller is connected
 When a controller is disconnected
 
 ## Buttons
++ button - any button
++ a
++ b
++ x
++ y
++ start
++ l
++ r
++ z
++ up - on d-pad
++ down - on d-pad
++ left - on d-pad
++ right - on d-pad
 
 ```js
  controller.button.change(function(button, state) {});
@@ -91,6 +104,8 @@ When the left trigger increases pressure (Between 0 & 1)
 When the left trigger decreases pressure
 
 ## Joysticks
++ stick - grey joystick
++ cStick - the C Stick
 
 ```js
  controller.stick.move(function(angle, pressure) {});
