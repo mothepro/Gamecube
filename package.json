@@ -1,6 +1,6 @@
 {
   "name": "gamecube",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Interface between gamecube controller and browser",
   "main": "index.js",
   "repository": {
