@@ -94,12 +94,12 @@ When the left trigger changes state (not fully pushed)
  *  1  = Change    - Increase in Pressure
 
 ```js
- controller['l:pressure'].increase(function(pressure) {});
+ controller.l.pressure.increase(function(pressure) {});
 ```
 When the left trigger increases pressure (Between 0 & 1)
 
 ```js
- controller['l:pressure'].decrease(function(pressure) {});
+ controller.l.pressure.decrease(function(pressure) {});
 ```
 When the left trigger decreases pressure
 
